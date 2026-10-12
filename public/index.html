@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ECLIPSX // Video Chat</title>
+    <link href="https://googleapis.com" rel="stylesheet">
+    <link rel="stylesheet" href="main.css">
+</head>
+<body>
+    <div class="stars"></div>
+    <div class="nebula"></div>
+
+    <div class="app-container">
+        <header>
+            <h1 class="brand-title">ECLIPSX</h1>
+        </header>
+
+        <!-- STEP 1: Enter Name -->
+        <div id="view-auth" class="card-view active">
+            <h2 class="view-title">Enter Your Name</h2>
+            <div class="input-group">
+                <input type="text" id="input-username" placeholder="Your name..." autocomplete="off">
+            </div>
+            <button id="btn-next" class="btn-primary">Next</button>
+        </div>
+
+        <!-- STEP 2: Choose Host or Join -->
+        <div id="view-dashboard" class="card-view">
+            <h2 class="view-title">Welcome, <span id="display-user">User</span></h2>
+            <div class="tab-controls">
+                <button id="tab-host" class="tab-btn active">Create Room</button>
+                <button id="tab-join" class="tab-btn">Join Room</button>
+            </div>
+
+            <!-- Create Room Panel -->
+            <div id="panel-host" class="sub-panel active">
+                <div class="input-group">
+                    <label>Room Name</label>
+                    <input type="text" id="host-room" placeholder="Name your room...">
+                </div>
+                <div class="input-group">
+                    <label>Room Code</label>
+                    <input type="password" id="host-pass" placeholder="Set a code...">
+                </div>
+                <button id="btn-host-launch" class="btn-primary">Create</button>
+            </div>
+
+            <!-- Join Room Panel -->
+            <div id="panel-join" class="sub-panel">
+                <div class="input-group">
+                    <label>Room Name</label>
+                    <input type="text" id="join-room" placeholder="Enter room name...">
+                </div>
+                <div class="input-group">
+                    <label>Room Code</label>
+                    <input type="password" id="join-pass" placeholder="Enter room code...">
+                </div>
+                <button id="btn-join-launch" class="btn-primary">Join</button>
+            </div>
+            <p id="error-message" class="error-text"></p>
+        </div>
+
+        <!-- STEP 3: Chat Screen -->
+        <div id="view-chat" class="card-view layout-chat">
+            <div class="room-header">
+                <h3>Room: <span id="current-room-text">-</span></h3>
+                <div class="filter-controls">
+                    <label for="filter">Filter:</label>
+                    <select id="filter" class="select-lunar">
+                        <option value="none">Normal</option>
+                        <option value="grayscale(100%)">B & W</option>
+                        <option value="invert(100%)">Eclipse</option>
+                        <option value="hue-rotate(90deg)">Cyan</option>
+                        <option value="sepia(80%)">Vintage</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="peerDiv" class="video-grid">
+                <div class="video-wrapper">
+                    <span class="video-label">You</span>
+                    <video id="localVideo" muted autoplay playsinline></video>
+                </div>
+            </div>
+
+            <!-- Floating Media Control Dashboard Bar -->
+            <div class="action-controls-bar">
+                <button id="btn-toggle-mute" class="ctrl-btn">Mute Mic</button>
+                <button id="btn-toggle-video" class="ctrl-btn">Hide Video</button>
+                <button id="btn-leave-room" class="ctrl-btn btn-danger">Leave</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Attachments -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://unpkg.com"></script>
+    <script src="main.js"></script>
+</body>
+</html>
