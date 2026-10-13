@@ -13,12 +13,12 @@ const roomClients = new Map()
 io.on('connection', function (socket) {
     let currentRoom = null
 
-    // Triggered when a user joins the lobby screen and picks or hosts a room
+    // Triggered when a user enters a name and hosts or joins a call channel
     socket.on("NewClient", function (roomName) {
         const room = roomName || 'default'
         currentRoom = room
 
-        // Calculate how many users are currently sitting inside this specific room space
+        // Calculate how many users are sitting inside this specific room space
         let clientsInRoom = roomClients.get(room) || 0
 
         // Enforce maximum 1-to-1 capability restrictions per room
@@ -27,7 +27,7 @@ io.on('connection', function (socket) {
             clientsInRoom++
             roomClients.set(room, clientsInRoom)
 
-            // If this is the second client to arrive, signal them to kick off the peer connection
+            // If this is the second client to arrive, signal them to start the WebRTC handshake
             if (clientsInRoom === 2) {
                 socket.emit('CreatePeer') 
             }
@@ -38,20 +38,27 @@ io.on('connection', function (socket) {
     })
 
     // Relay the WebRTC SDP connection Offer ONLY to the other peer inside the exact same room
-    socket.on('Offer', function (offer) {
-        if (currentRoom) {
-            socket.to(currentRoom).emit("BackOffer", offer)
+    socket.on('Offer', function (data) {
+        if (data.room) {
+            socket.to(data.room).emit("BackOffer", data.sdp)
         }
     })
 
     // Relay the WebRTC SDP connection Answer ONLY to the other peer inside the exact same room
     socket.on('Answer', function (data) {
-        if (currentRoom) {
-            socket.to(currentRoom).emit("BackAnswer", data)
+        if (data.room) {
+            socket.to(data.room).emit("BackAnswer", data.sdp)
         }
     })
 
-    // Handle abrupt user disconnects or window close events gracefully
+    // Instantly routes individual trickle network ICE packets as they fly in for zero connection lag
+    socket.on('SignalData', function (data) {
+        if (data.room) {
+            socket.to(data.room).emit("BackSignal", data.signal)
+        }
+    })
+
+    // Handle abrupt user disconnects or clicking the leave button event gracefully
     socket.on('disconnect', function () {
         if (currentRoom) {
             let clientsInRoom = roomClients.get(currentRoom) || 0
