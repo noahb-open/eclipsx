@@ -6,11 +6,13 @@
     <title>ECLIPSX // Multi-Video Chat</title>
     
     <!-- Design & UI Typography Styling Links -->
-    <link href="https://googleapis.com" rel="stylesheet">
+    <link rel="preconnect" href="https://googleapis.com">
+    <link rel="preconnect" href="https://gstatic.com" crossorigin>
+    <link href="https://googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="main.css">
     
     <!-- Core External Communication Library CDN Bundles -->
-    <script src="https://cdn.socket.io/4.8.4/socket.io.min.js"></script>
+    <script src="https://socket.io"></script>
     <script src="https://unpkg.com"></script>
 </head>
 <body>
@@ -30,12 +32,13 @@
             <!-- STAGE 1: Authentication Profile Configuration -->
             <div id="view-auth" class="card-view active">
                 <h2 class="view-title">Enter Your Name</h2>
-                <form>
+                <form onsubmit="return false;">
                     <div class="input-group">
                         <label for="input-username">Username</label>
                         
                     </div>
-                    <button type="submit" id="btn-next" class="btn-primary">Next</button>
+                    <!-- Added type="button" to fully secure against form submission refreshes -->
+                    <button type="button" id="btn-next" class="btn-primary">Next</button>
                 </form>
             </div>
 
@@ -44,34 +47,38 @@
                 <h2 class="view-title">Welcome, <span id="display-user" style="color: #38bdf8;">User</span></h2>
                 
                 <nav class="tab-controls">
-                    <button id="tab-host" class="tab-btn active">Create Room</button>
-                    <button id="tab-join" class="tab-btn">Join Room</button>
+                    <button type="button" id="tab-host" class="tab-btn active">Create Room</button>
+                    <button type="button" id="tab-join" class="tab-btn">Join Room</button>
                 </nav>
 
                 <!-- Configuration 1: Hosting Options -->
                 <div id="panel-host" class="sub-panel active">
-                    <div class="input-group">
-                        <label for="host-room">New Room Name</label>
-                        <input type="text" id="host-room" placeholder="Enter space room name...">
-                    </div>
-                    <div class="input-group">
-                        <label for="host-pass">Access Code</label>
-                        <input type="password" id="host-pass" placeholder="Secure room code...">
-                    </div>
-                    <button id="btn-host-launch" class="btn-primary">Create</button>
+                    <form onsubmit="return false;">
+                        <div class="input-group">
+                            <label for="host-room">New Room Name</label>
+                            <input type="text" id="host-room" placeholder="Enter space room name...">
+                        </div>
+                        <div class="input-group">
+                            <label for="host-pass">Access Code</label>
+                            <input type="password" id="host-pass" placeholder="Secure room code...">
+                        </div>
+                        <button type="button" id="btn-host-launch" class="btn-primary">Create</button>
+                    </form>
                 </div>
 
                 <!-- Configuration 2: Entry Guest Options -->
                 <div id="panel-join" class="sub-panel">
-                    <div class="input-group">
-                        <label for="join-room">Target Room Name</label>
-                        <input type="text" id="join-room" placeholder="Enter target room name...">
-                    </div>
-                    <div class="input-group">
-                        <label for="join-pass">Access Code</label>
-                        <input type="password" id="join-pass" placeholder="Target entry code...">
-                    </div>
-                    <button id="btn-join-launch" class="btn-primary">Join</button>
+                    <form onsubmit="return false;">
+                        <div class="input-group">
+                            <label for="join-room">Target Room Name</label>
+                            <input type="text" id="join-room" placeholder="Enter target room name...">
+                        </div>
+                        <div class="input-group">
+                            <label for="join-pass">Access Code</label>
+                            <input type="password" id="join-pass" placeholder="Target entry code...">
+                        </div>
+                        <button type="button" id="btn-join-launch" class="btn-primary">Join</button>
+                    </form>
                 </div>
 
                 <p id="error-message" class="error-text"></p>
@@ -105,9 +112,9 @@
                 </div>
 
                 <div class="media-controls" style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: center;">
-                    <button id="btn-toggle-mute" class="btn-primary" style="max-width: 160px; background: #1e293b;">Mute Mic</button>
-                    <button id="btn-toggle-video" class="btn-primary" style="max-width: 160px; background: #1e293b;">Hide Video</button>
-                    <button id="btn-leave-room" class="btn-primary" style="max-width: 160px; background: linear-gradient(135deg, #ef4444 0%, #991b1b 100%);">Leave</button>
+                    <button type="button" id="btn-toggle-mute" class="btn-primary" style="max-width: 160px; background: #1e293b;">Mute Mic</button>
+                    <button type="button" id="btn-toggle-video" class="btn-primary" style="max-width: 160px; background: #1e293b;">Hide Video</button>
+                    <button type="button" id="btn-leave-room" class="btn-primary" style="max-width: 160px; background: linear-gradient(135deg, #ef4444 0%, #991b1b 100%);">Leave</button>
                 </div>
             </div>
         </main>
