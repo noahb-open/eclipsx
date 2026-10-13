@@ -1,13 +1,14 @@
 {
-  "name": "simple-videochat-webrtc",
+  "name": "eclipsx-videochat-webrtc",
   "version": "1.0.0",
-  "description": "Video Chat between 2 people using simple-peer",
-  "main": "main.js",
+  "description": "Multi-room custom video chat app using simple-peer and socket.io",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "watch": "npx watchify ./public/main.js -o ./public/bundle.js"
+    "watch": "npx watchify ./public/main.js -o ./public/bundle.js",
+    "build": "npx browserify ./public/main.js -o ./public/bundle.js"
   },
-  "author": "Om Bharatiya",
+  "author": "nozza buch",
   "license": "MIT",
   "dependencies": {
     "express": "^4.16.4",
@@ -15,6 +16,7 @@
     "socket.io": "^2.2.0"
   },
   "devDependencies": {
+    "browserify": "^17.0.0",
     "watchify": "^3.11.1"
   }
 }
