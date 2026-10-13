@@ -79,8 +79,23 @@ function handleCustomJoin() {
     }
     
     let sanitizedCode = rawCode.replace(/[^a-z0-9-_]/g, '-');
-    window.location.hash = sanitizedCode;
-    startVideoCall('#' + sanitizedCode);
+    let targetRoom = '#' + sanitizedCode;
+
+    // Ask the server if this room exists first before doing anything
+    socket.emit("CheckRoom", targetRoom);
+
+    // Create a temporary one-time listener for the server's verification response
+    socket.once("RoomCheckResult", function(result) {
+        if (!result.exists) {
+            alert("This room does not exist! Please check the code or host a new call.");
+        } else if (result.full) {
+            alert("This room is already full with 2 users.");
+        } else {
+            // The room exists and has space! Safe to join.
+            window.location.hash = sanitizedCode;
+            startVideoCall(targetRoom);
+        }
+    });
 }
 
 // --- CORE WEBRTC & STREAM CALL ENGINE ---
@@ -275,4 +290,3 @@ function CreateDiv() {
     div.innerHTML = "Click stream to mute / unmute"
     document.querySelector('#peerDiv').appendChild(div)
 }
-    
