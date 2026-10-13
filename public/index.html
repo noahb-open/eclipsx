@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Eclipsx - Simple Video Chat</title>
-    <!-- Combined styles directly inside the file for easy deployment -->
     <style>
         /* Deep Space Reset */
         body {
@@ -30,7 +29,7 @@
         /* Glowing Cosmic Inputs */
         .lunar-input {
             padding: 12px;
-            width: 90%;
+            width: 100%;
             font-size: 16px;
             background-color: #0d1117;
             border: 1px solid #2d3748;
@@ -94,7 +93,7 @@
             border-radius: 12px;
             border: 2px solid #1f293d;
             background-color: #0d1117;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
         }
 
         #peerVideo:hover {
@@ -141,15 +140,23 @@
                 <h4 style="margin-top: 0; margin-bottom: 8px; color: #f8f9fa; font-weight: 500;">Welcome, <span id="greetingName" style="color: #4d7cff;"></span>!</h4>
                 <p style="font-size: 14px; color: #a0aec0; margin-bottom: 25px;">Choose an option below:</p>
                 
-                <button id="hostBtn" class="btn-lunar-success">🚀 Host a Call</button>
+                <!-- Host Section with Custom Name Entry -->
+                <div style="margin-bottom: 5px;">
+                    <h4 style="margin-bottom: 12px; font-size: 14px; color: #f8f9fa; font-weight: 500; text-align: left; padding-left: 15px;">Host a New Call</h4>
+                    <input type="text" id="hostRoomInput" placeholder="Name your room (e.g., dev-team)" class="lunar-input">
+                    <button id="hostBtn" class="btn-lunar-success">🚀 Host Call</button>
+                </div>
                 
-                <div style="border-top: 1px solid #2d3748; margin: 20px 0; position: relative;">
+                <div style="border-top: 1px solid #2d3748; margin: 25px 0; position: relative;">
                     <span style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: #121824; padding: 0 12px; color: #718096; font-size: 11px;">OR</span>
                 </div>
 
-                <h4 style="margin-bottom: 12px; font-size: 14px; color: #f8f9fa; font-weight: 500;">Join an Existing Call</h4>
-                <input type="text" id="roomInput" placeholder="Enter Room Code" class="lunar-input">
-                <button id="joinBtn" class="btn-lunar-primary" style="background: #2d3748; box-shadow: none;">Join Room</button>
+                <!-- Join Section -->
+                <div>
+                    <h4 style="margin-bottom: 12px; font-size: 14px; color: #f8f9fa; font-weight: 500; text-align: left; padding-left: 15px;">Join an Existing Call</h4>
+                    <input type="text" id="roomInput" placeholder="Enter Room Code" class="lunar-input">
+                    <button id="joinBtn" class="btn-lunar-primary" style="background: #2d3748; box-shadow: none;">Join Room</button>
+                </div>
             </div>
 
         </div>
