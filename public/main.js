@@ -14,6 +14,7 @@ const roomInput = document.querySelector('#roomInput')
 const nextBtn = document.querySelector('#nextBtn')
 const hostBtn = document.querySelector('#hostBtn')
 const joinBtn = document.querySelector('#joinBtn')
+const leaveBtn = document.querySelector('#leaveBtn')
 const greetingName = document.querySelector('#greetingName')
 const peerNameTag = document.querySelector('#peerNameTag')
 
@@ -96,6 +97,25 @@ function startVideoCall(roomName) {
             video.srcObject = stream
             video.play()
 
+            // Hook up the Leave Button handler inside our media loop
+            leaveBtn.addEventListener('click', handleLeaveCall);
+
+            function handleLeaveCall() {
+                leaveBtn.removeEventListener('click', handleLeaveCall);
+                window.location.hash = '';
+                socket.emit('disconnect'); 
+                
+                // Shut down camera and mic hardware tracks cleanly
+                stream.getTracks().forEach(track => track.stop());
+                
+                RemovePeer();
+                video.srcObject = null;
+                
+                // Return smoothly to the step selection lobby
+                callInterface.style.display = 'none';
+                lobby.style.display = 'block';
+            }
+
             // Dispatches filter changes down through the P2P connection channel
             filter.addEventListener('change', (event) => {
                 currentFilter = event.target.value
@@ -105,13 +125,25 @@ function startVideoCall(roomName) {
             })
 
             function InitPeer(type) {
-                let peer = new Peer({ initiator: (type == 'init') ? true : false, stream: stream, trickle: false })
+                // Enabled trickle for instant P2P network connections
+                let peer = new Peer({ 
+                    initiator: (type == 'init') ? true : false, 
+                    stream: stream, 
+                    trickle: true 
+                })
                 
                 peer.on('stream', function (stream) {
                     CreateVideo(stream)
                 })
                 
-                // Read and act on multi-purpose incoming JSON events from your peer
+                // Send out trickle network candidate chunks as they are found
+                peer.on('signal', function (data) {
+                    if (data.candidate) {
+                        socket.emit('SignalData', { room: roomName, signal: data })
+                    }
+                })
+                
+                // Read incoming data channel configurations (names and filters)
                 peer.on('data', function (data) {
                     let decodedData = new TextDecoder('utf-8').decode(data)
                     let message = JSON.parse(decodedData)
@@ -131,9 +163,11 @@ function startVideoCall(roomName) {
             function MakePeer() {
                 client.gotAnswer = false
                 let peer = InitPeer('init')
+                
+                // Track primary SDP offer signals with specific room parameters
                 peer.on('signal', function (data) {
-                    if (!client.gotAnswer) {
-                        socket.emit('Offer', data)
+                    if (data.sdp && !client.gotAnswer) {
+                        socket.emit('Offer', { room: roomName, sdp: data })
                     }
                 })
                 client.peer = peer
@@ -141,34 +175,45 @@ function startVideoCall(roomName) {
 
             function FrontAnswer(offer) {
                 let peer = InitPeer('notInit')
+                
+                // Track secondary SDP answer signals with specific room parameters
                 peer.on('signal', (data) => {
-                    socket.emit('Answer', data)
+                    if (data.sdp) {
+                        socket.emit('Answer', { room: roomName, sdp: data })
+                    }
                 })
                 peer.signal(offer)
                 client.peer = peer
             }
 
-            function SignalAnswer(answer) {
-                client.gotAnswer = true
-                let peer = client.peer
-                peer.signal(answer)
+            // Handle incoming target SDP answers or piecemeal trickle network logs
+            function ProcessIncomingSignal(signalData) {
+                if (client.peer) {
+                    if (signalData.sdp && signalData.sdp.type === 'answer') {
+                        client.gotAnswer = true
+                    }
+                    client.peer.signal(signalData)
+                }
             }
 
             function CreateVideo(stream) {
+                // Prevent duplicate elements from spawning on trickle refreshes
+                if (document.getElementById('peerVideo')) return;
+
                 CreateDiv()
 
                 let videoElement = document.createElement('video')
-                videoElement.id = 'peerVideo' // Targets full screen styling
+                videoElement.id = 'peerVideo' // Targets layout backdrops
                 videoElement.srcObject = stream
-                videoElement.setAttribute('class', '') // Clear out any interfering styling classes
+                videoElement.setAttribute('class', '') 
                 document.querySelector('#peerDiv').appendChild(videoElement)
                 videoElement.play()
                 
-                // Immediately sync active parameters to our peer across the Data Channel
+                // Sync username and active lens targets after half a second
                 setTimeout(() => {
                     SendData({ type: 'identity', value: myUsername })
                     if (currentFilter) SendData({ type: 'filter', value: currentFilter })
-                }, 1000)
+                }, 500)
 
                 videoElement.addEventListener('click', () => {
                     if (videoElement.volume != 0) videoElement.volume = 0
@@ -182,7 +227,7 @@ function startVideoCall(roomName) {
                 window.location.reload();
             }
 
-            // Wrapper assistant method to pass structured parameters cleanly over WebRTC
+            // Assistant helper to bundle payload objects over Data Channel connections
             function SendData(obj) {
                 if (client.peer && client.peer.connected) {
                     client.peer.send(JSON.stringify(obj))
@@ -196,10 +241,12 @@ function startVideoCall(roomName) {
                 if (client.peer) {
                     client.peer.destroy()
                 }
+                client = {};
             }
 
             socket.on('BackOffer', FrontAnswer)
-            socket.on('BackAnswer', SignalAnswer)
+            socket.on('BackAnswer', ProcessIncomingSignal)
+            socket.on('BackSignal', ProcessIncomingSignal)
             socket.on('SessionActive', SessionActive)
             socket.on('CreatePeer', MakePeer)
             socket.on('Disconnect', RemovePeer)
@@ -228,3 +275,4 @@ function CreateDiv() {
     div.innerHTML = "Click stream to mute / unmute"
     document.querySelector('#peerDiv').appendChild(div)
 }
+    
