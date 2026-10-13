@@ -13,6 +13,23 @@ const roomClients = new Map()
 io.on('connection', function (socket) {
     let currentRoom = null
 
+    // Explicitly check if a room code exists before letting someone join
+    socket.on("CheckRoom", function (roomName) {
+        const room = roomName || 'default';
+        const clientsInRoom = roomClients.get(room) || 0;
+        
+        if (clientsInRoom === 0) {
+            // Room does not exist or has empty slots
+            socket.emit("RoomCheckResult", { exists: false });
+        } else if (clientsInRoom >= 2) {
+            // Room is full
+            socket.emit("RoomCheckResult", { exists: true, full: true });
+        } else {
+            // Room exists and has space (1 person is waiting)
+            socket.emit("RoomCheckResult", { exists: true, full: false });
+        }
+    });
+
     // Triggered when a user enters a name and hosts or joins a call channel
     socket.on("NewClient", function (roomName) {
         const room = roomName || 'default'
