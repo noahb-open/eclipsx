@@ -9,6 +9,7 @@ const callInterface = document.querySelector('#callInterface')
 
 // Inputs & Interactive elements
 const nameInput = document.querySelector('#nameInput')
+const hostRoomInput = document.querySelector('#hostRoomInput')
 const roomInput = document.querySelector('#roomInput')
 const nextBtn = document.querySelector('#nextBtn')
 const hostBtn = document.querySelector('#hostBtn')
@@ -26,7 +27,7 @@ let myUsername = ""
 
 // --- LOBBY WORKFLOW ENGINE ---
 
-// If an invite link is already in the URL hash, pre-populate the code field
+// If an invite link is already in the URL hash, pre-populate the join field
 if (window.location.hash) {
     roomInput.value = window.location.hash.substring(1);
 }
@@ -48,15 +49,24 @@ function proceedToRoomSelection() {
     stepAction.style.display = 'block';
 }
 
-// Step 2, Option A: Host a New Call
-hostBtn.addEventListener('click', () => {
-    // Generate a simple, clean, random 6-character room code string
-    let randomRoomCode = Math.random().toString(36).substring(2, 8);
-    window.location.hash = randomRoomCode;
-    startVideoCall('#' + randomRoomCode);
-});
+// Step 2, Option A: Host a Call with a Custom Name
+hostBtn.addEventListener('click', handleCustomHost);
+hostRoomInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleCustomHost(); });
 
-// Step 2, Option B: Join an Existing Call
+function handleCustomHost() {
+    let rawCode = hostRoomInput.value.trim().toLowerCase();
+    if (!rawCode) {
+        alert('Please name your room first!');
+        return;
+    }
+    
+    // Sanitize string to format securely inside URL hash contexts
+    let sanitizedCode = rawCode.replace(/[^a-z0-9-_]/g, '-');
+    window.location.hash = sanitizedCode;
+    startVideoCall('#' + sanitizedCode);
+}
+
+// Step 2, Option B: Join an Existing Call by Typing the Name
 joinBtn.addEventListener('click', handleCustomJoin);
 roomInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleCustomJoin(); });
 
@@ -67,7 +77,6 @@ function handleCustomJoin() {
         return;
     }
     
-    // Sanitize string symbols to format securely inside URL hash contexts
     let sanitizedCode = rawCode.replace(/[^a-z0-9-_]/g, '-');
     window.location.hash = sanitizedCode;
     startVideoCall('#' + sanitizedCode);
