@@ -158,9 +158,9 @@ function startVideoCall(roomName) {
                 CreateDiv()
 
                 let videoElement = document.createElement('video')
-                videoElement.id = 'peerVideo'
+                videoElement.id = 'peerVideo' // Targets full screen styling
                 videoElement.srcObject = stream
-                videoElement.setAttribute('class', 'embed-responsive-item')
+                videoElement.setAttribute('class', '') // Clear out any interfering styling classes
                 document.querySelector('#peerDiv').appendChild(videoElement)
                 videoElement.play()
                 
