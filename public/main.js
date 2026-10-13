@@ -2,8 +2,12 @@ const socket = io()
 let myUsername = ""
 let activeRoom = ""
 let localStreamData = null
-let currentPeerConnection = null
 let myPeerInstance = null
+let iAmTheHost = false // Local administrative authority state flag
+
+// Mesh architecture collection maps tracking active connections dynamically
+const activePeerCalls = {}       // Stores: { socketId: MediaConnection }
+const activePeerConnections = {} // Stores: { socketId: DataConnection }
 
 // Hardware Mute State Toggles
 let isAudioMuted = false
@@ -86,87 +90,126 @@ socket.on("RoomJoined", ({ isHost, roomName }) => {
     switchView(viewChat)
 
     if (localStreamData) {
-        initializePeerJSConnection(localStreamData)
+        initializeMeshCallingTopology(localStreamData)
     } else {
         alert("Camera stream was not ready. Please refresh.")
     }
 })
 
-function initializePeerJSConnection(stream) {
+function initializeMeshCallingTopology(stream) {
+    // Globally sync any drop-down image manipulation across all active connections
     selectFilter.addEventListener('change', (event) => {
         let filterVal = event.target.value
         videoLocal.style.filter = filterVal
-        if (currentPeerConnection && currentPeerConnection.dataConnection) {
-            currentPeerConnection.dataConnection.send(filterVal)
-        }
+        Object.values(activePeerConnections).forEach(conn => {
+            if (conn.open) conn.send(filterVal)
+        })
     })
 
+    // Bootstraps our local browser standalone PeerJS network instance
     myPeerInstance = new window.Peer(null, { debug: 1 })
 
     myPeerInstance.on('open', (id) => {
         socket.emit('ReadyToConnect', { peerId: id, roomName: activeRoom })
     })
 
+    // Handle inbound incoming calls coming from newcomers entering after us
     myPeerInstance.on('call', (call) => {
         call.answer(stream)
-        handleRemoteStream(call)
+        
+        // Destructures matching socket information stored safely inside the inbound call configuration options metadata field
+        const metadata = call.metadata || {}
+        handleIncomingRemoteMeshStream(call, metadata.socketId, metadata.username || "Friend")
     })
 
+    // Handle incoming data channel links meant for tracking visual canvas filters
     myPeerInstance.on('connection', (conn) => {
-        if (!currentPeerConnection) currentPeerConnection = {}
-        currentPeerConnection.dataConnection = conn
-        setupDataListener(conn)
-    })
-
-    socket.on('ConnectWithPeer', ({ targetPeerId }) => {
-        const call = myPeerInstance.call(targetPeerId, stream)
-        handleRemoteStream(call)
-
-        const conn = myPeerInstance.connect(targetPeerId)
-        if (!currentPeerConnection) currentPeerConnection = {}
-        currentPeerConnection.dataConnection = conn
-        setupDataListener(conn)
+        const metadata = conn.metadata || {}
+        activePeerConnections[metadata.socketId] = conn
+        setupMeshDataConnectionListeners(conn, metadata.socketId)
     })
 }
 
-function handleRemoteStream(call) {
-    if (!currentPeerConnection) currentPeerConnection = {}
-    currentPeerConnection.mediaCall = call
+// Fired within a newcomer browser session when pulling down the structural layout roster
+socket.on('MeshRoomRoster', ({ existingPeers, isHost }) => {
+    iAmTheHost = isHost // Assign administrative level flags locally
+
+    existingPeers.forEach(peerNode => {
+        // Construct and dispatch a direct video stream call tracking our identity metrics
+        const call = myPeerInstance.call(peerNode.peerId, localStreamData, {
+            metadata: { socketId: socket.id, username: myUsername }
+        })
+        handleIncomingRemoteMeshStream(call, peerNode.socketId, peerNode.username)
+
+        // Pair the above pipeline with a raw data channel socket pipeline connection link
+        const conn = myPeerInstance.connect(peerNode.peerId, {
+            metadata: { socketId: socket.id }
+        })
+        activePeerConnections[peerNode.socketId] = conn
+        setupMeshDataConnectionListeners(conn, peerNode.socketId)
+    })
+})
+
+socket.on('NewPeerJoinedMesh', ({ peerId, username, socketId }) => {
+    console.log(`${username} joined call mesh connections...`)
+})
+
+function handleIncomingRemoteMeshStream(call, remoteSocketId, remoteUsername) {
+    activePeerCalls[remoteSocketId] = call
 
     call.on('stream', (remoteStream) => {
-        if (document.querySelector('#peerVideo')) return
+        // Enforces structural integrity layout locks to block duplicates
+        if (document.getElementById(`wrapper-${remoteSocketId}`)) return
 
+        const videoGrid = document.querySelector('#peerDiv')
+
+        // Assemble an elegant, nested container matching your CSS layout guidelines rules
         let container = document.createElement('div')
         container.setAttribute('class', 'video-wrapper')
-        container.id = 'remote-wrapper'
+        container.id = `wrapper-${remoteSocketId}`
 
         let remoteLabel = document.createElement('span')
         remoteLabel.setAttribute('class', 'video-label')
-        remoteLabel.textContent = "Friend"
+        remoteLabel.textContent = remoteUsername
+
+        // If I am verified as the room host, render administrative kick actions overrides
+        if (iAmTheHost) {
+            let kickBtn = document.createElement('button')
+            kickBtn.textContent = "Kick"
+            kickBtn.setAttribute('style', 'position: absolute; top: 10px; right: 10px; z-index: 10; background: #ef4444; color: #fff; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-family: inherit; font-size: 0.85rem;')
+            
+            kickBtn.addEventListener('click', () => {
+                if (confirm(`Are you sure you want to disconnect ${remoteUsername}?`)) {
+                    socket.emit('KickParticipant', { targetSocketId: remoteSocketId })
+                }
+            })
+            container.appendChild(kickBtn)
+        }
 
         let videoRemote = document.createElement('video')
-        videoRemote.id = 'peerVideo'
+        videoRemote.id = `video-${remoteSocketId}`
         videoRemote.srcObject = remoteStream
         videoRemote.autoplay = true
         videoRemote.playsInline = true
 
         container.appendChild(remoteLabel)
         container.appendChild(videoRemote)
-        document.querySelector('#peerDiv').appendChild(container)
+        videoGrid.appendChild(container)
     })
 }
 
-function setupDataListener(conn) {
-    conn.on('data', (data) => {
-        let peervideo = document.querySelector('#peerVideo')
-        if(peervideo) peervideo.style.filter = data
+function setupMeshDataConnectionListeners(conn, remoteSocketId) {
+    conn.on('data', (filterData) => {
+        let peerVideoElement = document.getElementById(`video-${remoteSocketId}`)
+        if (peerVideoElement) {
+            peerVideoElement.style.filter = filterData
+        }
     })
 }
 
 // TOGGLE BUTTON INTERACTION EVENT LOOPS
 btnMute.addEventListener('click', () => {
     if (localStreamData) {
-        // Toggle the active state of all audio track streams globally
         isAudioMuted = !isAudioMuted
         localStreamData.getAudioTracks().forEach(track => track.enabled = !isAudioMuted)
         btnMute.textContent = isAudioMuted ? "Unmute Mic" : "Mute Mic"
@@ -176,7 +219,6 @@ btnMute.addEventListener('click', () => {
 
 btnVideo.addEventListener('click', () => {
     if (localStreamData) {
-        // Toggle the active state of all video track streams globally
         isVideoHidden = !isVideoHidden
         localStreamData.getVideoTracks().forEach(track => track.enabled = !isVideoHidden)
         btnVideo.textContent = isVideoHidden ? "Show Video" : "Hide Video"
@@ -185,45 +227,60 @@ btnVideo.addEventListener('click', () => {
 })
 
 btnLeave.addEventListener('click', () => {
-    // Notify the server to cleanly eject you from the active socket space
-    socket.emit('disconnectRoom') // Custom signal fallback catcher helper
+    socket.emit('disconnectRoom')
     executeEclipsxTeardown()
 })
 
-socket.on('Disconnect', () => {
-    clearRemoteViewGrid()
+socket.on('PeerDisconnectedFromMesh', ({ socketId }) => {
+    removeSinglePeerFromMeshDisplay(socketId)
 })
 
-function clearRemoteViewGrid() {
-    const remoteWrapper = document.querySelector('#remote-wrapper')
-    if(remoteWrapper) remoteWrapper.remove()
-    if(currentPeerConnection) {
-        if(currentPeerConnection.mediaCall) currentPeerConnection.mediaCall.close()
-        if(currentPeerConnection.dataConnection) currentPeerConnection.dataConnection.close()
-        currentPeerConnection = null
+// Administrative Signal Catchers
+socket.on('YouHaveBeenKicked', () => {
+    alert("You have been disconnected from the call by the room host.")
+    executeEclipsxTeardown()
+})
+
+socket.on('HostClosedRoom', () => {
+    alert("The host has ended this room call session.")
+    executeEclipsxTeardown()
+})
+
+function removeSinglePeerFromMeshDisplay(socketId) {
+    const remoteWrapper = document.getElementById(`wrapper-${socketId}`)
+    if (remoteWrapper) remoteWrapper.remove()
+
+    if (activePeerCalls[socketId]) {
+        activePeerCalls[socketId].close()
+        delete activePeerCalls[socketId]
+    }
+    if (activePeerConnections[socketId]) {
+        activePeerConnections[socketId].close()
+        delete activePeerConnections[socketId]
     }
 }
 
 function executeEclipsxTeardown() {
-    clearRemoteViewGrid()
+    // 1. Terminate all active data links safely in memory loop hooks
+    Object.keys(activePeerCalls).forEach(socketId => {
+        removeSinglePeerFromMeshDisplay(socketId)
+    })
     
-    // Destroy PeerJS engine footprint sessions fully to allow clean rebuild variables
-    if(myPeerInstance) {
+    // 2. Clear out core local network configurations footprints completely
+    if (myPeerInstance) {
         myPeerInstance.destroy()
         myPeerInstance = null
     }
     
-    // Reset room inputs configurations state parameters cleanly
     activeRoom = ""
+    iAmTheHost = false // Clear authority levels
     document.querySelector('#host-room').value = ""
     document.querySelector('#host-pass').value = ""
     document.querySelector('#join-room').value = ""
     document.querySelector('#join-pass').value = ""
     
-    // Return back smoothly to dashboard state configuration screens layouts
     switchView(viewDashboard)
 }
-
 function switchView(targetView) {
     if(!viewAuth || !viewDashboard || !viewChat) return;
     [viewAuth, viewDashboard, viewChat].forEach(v => v.classList.remove('active'))
